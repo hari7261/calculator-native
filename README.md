@@ -4,6 +4,13 @@
 
 This is a basic calculator application built with React Native, designed to provide users with a simple yet effective way to perform basic arithmetic operations. The app features a responsive design that scales based on the device's width, supports dark and light themes, and includes essential functionalities like addition, subtraction, multiplication, and division.
 
+## Screenshots
+Here are two screenshots of the output of the Calculator App:
+
+![Calculator App - Light Theme](https://github.com/hari7261/calculator-native/blob/main/image1.jpg)
+![Calculator App - Dark Theme](https://github.com/hari7261/calculator-native/blob/main/image2.jpg)
+
+
 ## Features
 
 - **Basic Arithmetic Operations**: Perform addition, subtraction, multiplication, and division.
