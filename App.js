@@ -1,29 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Dimensions, useColorScheme } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, useColorScheme, Modal, ScrollView } from 'react-native';
 
-const { width, height } = Dimensions.get('window');
-const baseWidth = 375; // Base width for scaling
-
-const scale = size => (width / baseWidth) * size;
-
-const Calculator = () => {
+const App = () => {
   const systemColorScheme = useColorScheme();
   const [darkMode, setDarkMode] = useState(systemColorScheme === 'dark');
   const [display, setDisplay] = useState('0');
   const [currentValue, setCurrentValue] = useState(null);
   const [operator, setOperator] = useState(null);
   const [waitingForOperand, setWaitingForOperand] = useState(false);
-
-  useEffect(() => {
-    const updateLayout = () => {
-      const { width: newWidth } = Dimensions.get('window');
-      // Re-render component to update scaled sizes
-      setDisplay(display);
-    };
-
-    Dimensions.addEventListener('change', updateLayout);
-    return () => Dimensions.removeEventListener('change', updateLayout);
-  }, []);
+  const [history, setHistory] = useState([]);
+  const [isHistoryVisible, setIsHistoryVisible] = useState(false);
 
   const toggleTheme = () => {
     setDarkMode(!darkMode);
@@ -54,17 +40,6 @@ const Calculator = () => {
     setWaitingForOperand(false);
   };
 
-  const toggleSign = () => {
-    const newValue = parseFloat(display) * -1;
-    setDisplay(String(newValue));
-  };
-
-  const inputPercent = () => {
-    const currentValue = parseFloat(display);
-    const newValue = currentValue / 100;
-    setDisplay(String(newValue));
-  };
-
   const performOperation = (nextOperator) => {
     const inputValue = parseFloat(display);
 
@@ -73,6 +48,7 @@ const Calculator = () => {
     } else if (operator) {
       const result = calculate(currentValue, inputValue, operator);
       setDisplay(String(result));
+      setHistory([...history, `${currentValue} ${operator} ${inputValue} = ${result}`]); // Update history
       setCurrentValue(result);
     }
 
@@ -95,71 +71,91 @@ const Calculator = () => {
     }
   };
 
-  const Button = ({ onPress, text, isZero, isOperator }) => (
-    <TouchableOpacity 
-      onPress={onPress} 
-      style={[
-        styles.button, 
-        isZero && styles.zeroButton,
-        isOperator && styles.operatorButton,
-        { backgroundColor: darkMode ? styles.darkTheme.buttonBackground : styles.lightTheme.buttonBackground }
-      ]}
+  const Button = ({ onPress, text, isOperator, isZero }) => (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[styles.button, isOperator && styles.operatorButton, isZero && styles.zeroButton]}
     >
-      <Text style={[
-        styles.buttonText,
-        isOperator && styles.operatorButtonText,
-        { color: darkMode ? styles.darkTheme.buttonText : styles.lightTheme.buttonText }
-      ]}>{text}</Text>
+      <Text style={[styles.buttonText, isOperator && styles.operatorButtonText]}>{text}</Text>
     </TouchableOpacity>
   );
 
+  const clearHistory = () => {
+    setHistory([]);
+    setIsHistoryVisible(false);
+  };
+
   return (
-    <SafeAreaView style={[
-      styles.container,
-      { backgroundColor: darkMode ? styles.darkTheme.background : styles.lightTheme.background }
-    ]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: darkMode ? '#1C1C1E' : '#FFFFFF' }]}>
       <TouchableOpacity onPress={toggleTheme} style={styles.themeToggle}>
-        <Text style={[styles.themeToggleText, { color: darkMode ? styles.darkTheme.text : styles.lightTheme.text }]}>
+        <Text style={{ color: darkMode ? '#FFFFFF' : '#000000', fontSize: 24 }}>
           {darkMode ? '☀️' : '🌙'}
         </Text>
       </TouchableOpacity>
       <View style={styles.display}>
-        <Text style={[
-          styles.displayText,
-          { color: darkMode ? styles.darkTheme.text : styles.lightTheme.text }
-        ]}>{display}</Text>
+        <Text style={[styles.displayText, { color: darkMode ? '#FFFFFF' : '#000000' }]}>
+          {display}
+        </Text>
+        <Text style={[styles.operatorText, { color: darkMode ? '#FF9500' : '#FF9500' }]}>
+          {operator ? operator : ''}
+        </Text>
       </View>
       <View style={styles.buttonContainer}>
         <View style={styles.row}>
           <Button onPress={clearDisplay} text="AC" />
-          <Button onPress={toggleSign} text="+/-" />
-          <Button onPress={inputPercent} text="%" />
-          <Button onPress={() => performOperation('÷')} text="÷" isOperator />
-        </View>
-        <View style={styles.row}>
           <Button onPress={() => inputDigit(7)} text="7" />
           <Button onPress={() => inputDigit(8)} text="8" />
           <Button onPress={() => inputDigit(9)} text="9" />
-          <Button onPress={() => performOperation('×')} text="×" isOperator />
+          <Button onPress={() => performOperation('÷')} text="÷" isOperator />
         </View>
         <View style={styles.row}>
           <Button onPress={() => inputDigit(4)} text="4" />
           <Button onPress={() => inputDigit(5)} text="5" />
           <Button onPress={() => inputDigit(6)} text="6" />
-          <Button onPress={() => performOperation('-')} text="-" isOperator />
+          <Button onPress={() => performOperation('×')} text="×" isOperator />
         </View>
         <View style={styles.row}>
           <Button onPress={() => inputDigit(1)} text="1" />
           <Button onPress={() => inputDigit(2)} text="2" />
           <Button onPress={() => inputDigit(3)} text="3" />
-          <Button onPress={() => performOperation('+')} text="+" isOperator />
+          <Button onPress={() => performOperation('-')} text="-" isOperator />
         </View>
         <View style={styles.row}>
           <Button onPress={() => inputDigit(0)} text="0" isZero />
           <Button onPress={inputDecimal} text="." />
-          <Button onPress={() => performOperation('=')} text="=" isOperator />
+          <Button onPress={() => performOperation('+')} text="+" isOperator />
         </View>
       </View>
+      <TouchableOpacity onPress={() => setIsHistoryVisible(true)} style={styles.historyButton}>
+        <Text style={{ color: darkMode ? '#FFFFFF' : '#000000', fontSize: 18 }}>History</Text>
+      </TouchableOpacity>
+      <Modal
+        visible={isHistoryVisible}
+        animationType="slide"
+        transparent={true}
+      >
+        <View style={[styles.modalContainer, { backgroundColor: darkMode ? '#1C1C1E' : '#FFFFFF' }]}>
+          <ScrollView style={styles.historyContainer}>
+            {history.length === 0 ? (
+              <Text style={[styles.historyText, { color: darkMode ? '#FFFFFF' : '#000000' }]}>
+                No history available.
+              </Text>
+            ) : (
+              history.map((item, index) => (
+                <Text key={index} style={[styles.historyText, { color: darkMode ? '#FFFFFF' : '#000000' }]}>
+                  {item}
+                </Text>
+              ))
+            )}
+          </ScrollView>
+          <TouchableOpacity onPress={clearHistory} style={styles.clearButton}>
+            <Text style={{ color: 'red', fontSize: 18 }}>Clear History</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setIsHistoryVisible(false)} style={styles.closeButton}>
+            <Text style={{ color: 'blue', fontSize: 18 }}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -167,66 +163,89 @@ const Calculator = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 20,
   },
   display: {
     flex: 1,
     justifyContent: 'flex-end',
     alignItems: 'flex-end',
-    padding: scale(20),
+    marginBottom: 20,
   },
   displayText: {
-    fontSize: scale(70),
+    fontSize: 60,
+    fontWeight: 'bold',
+  },
+  operatorText: {
+    fontSize: 40,
+    color: '#FF9500',
+    marginBottom: 10,
   },
   buttonContainer: {
-    paddingBottom: scale(20),
+    flexDirection: 'column',
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: scale(10),
+    marginBottom: 10,
   },
   button: {
-    width: scale(80),
-    height: scale(80),
-    borderRadius: scale(40),
+    flex: 1,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  zeroButton: {
-    width: scale(170),
-    alignItems: 'flex-start',
-    paddingLeft: scale(30),
+    height: 70,
+    marginHorizontal: 5,
   },
   operatorButton: {
     backgroundColor: '#FF9500',
   },
+  zeroButton: {
+    flex: 2,
+  },
   buttonText: {
-    fontSize: scale(30),
+    fontSize: 24,
+    color: '#000000',
   },
   operatorButtonText: {
-    color: 'white',
+    color: '#FFFFFF',
   },
   themeToggle: {
     position: 'absolute',
-    top: scale(40),
-    right: scale(20),
+    top: 50,
+    right: 20,
     zIndex: 1,
   },
-  themeToggleText: {
-    fontSize: scale(24),
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
-  darkTheme: {
-    background: 'black',
-    text: 'white',
-    buttonBackground: '#333333',
-    buttonText: 'white',
+  historyContainer: {
+    maxHeight: '80%',
+    width: '100%',
   },
-  lightTheme: {
-    background: 'white',
-    text: 'black',
-    buttonBackground: '#E0E0E0',
-    buttonText: 'black',
+  historyText: {
+    fontSize: 16,
+    paddingVertical: 5,
+  },
+  clearButton: {
+    marginTop: 10,
+    padding: 10,
+  },
+  closeButton: {
+    marginTop: 10,
+    padding: 10,
+  },
+  historyButton: {
+    marginTop: 10,
+    backgroundColor: '#007AFF',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 50,
   },
 });
 
-export default Calculator;
+export default App;
